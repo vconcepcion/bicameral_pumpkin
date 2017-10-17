@@ -1,84 +1,108 @@
 #include <IRremote.h>
 
-#define RECEIVERS 2
-
+#define BASE_COUNT 2
+#define THRESHOLD 1000
+// Define all the devices as global variables
+IRrecv *irrecvs[BASE_COUNT];
+int ledPins[] = {7,2}; 
 int receiverPins[] = {8,13};   
-int ledPin[] = {7,2}; 
-int ledState[] = {0,0};
-int scores[] = {0,0};
-int recieverState[] = {0, 1};
-int interval = 3000;
-unsigned long startMillis[2];
-unsigned long elapsedTime[2];
 
-IRrecv *irrecvs[RECEIVERS];
+// Define all time related variables
+unsigned long startMillis;
+unsigned long elapsedTime;
+
+
+// State variables
+int activeReceiver;
+
+// Store scores
+int score = 0;
 decode_results results;
-void setup()
-{
+
+// methods
+void setup() {
   Serial.begin(9600);
-  irrecvs[0] = new IRrecv(8); // Receiver #0
-  irrecvs[1] = new IRrecv(13); // Receiver #1: pin 3
-
-
-  for (int i = 0; i < RECEIVERS; i++)
-    irrecvs[i]->enableIRIn();
-  
-  pinMode(ledPin[0], OUTPUT);
-  pinMode(ledPin[1], OUTPUT);
+  initSensors();
+  initLeds();
 }
- 
+
+void initSensors() {
+  irrecvs[0] = new IRrecv(8);
+  irrecvs[1] = new IRrecv(13);
+
+  for (int i = 0; i < BASE_COUNT; i++)
+    irrecvs[i]->enableIRIn();
+}
+
+void initLeds() {
+  for (int i = 0; i < BASE_COUNT; i++)
+    pinMode(ledPins[i], OUTPUT);
+}
+
 void loop() {
-  toggleLedBasedOnTime();
+  toggleSensors();
 
-  for (int i = 0; i < RECEIVERS; i++){
-    
+  for (int i = 0; i < BASE_COUNT; i++){
     if (irrecvs[i]->decode(&results)) {
-      if(ledState[i] == 1) {
-        Serial.println("index:");
-        Serial.println(i);
-        turnOffLed(i);
-        scores[i] += i+1;
-        Serial.println("scores[%i]:%i", i, scores[i]);
-      }
-
-      unsigned int value = results.value;
-      Serial.println(value);
+      if(i == activeReceiver)
+        recordHit(i);
       irrecvs[0]->resume();
     }
   }
 }
 
-void turnOffLed(int index)
-{
-  Serial.println("in turnOffLed");
-  digitalWrite(ledPin[index], LOW);
-  ledState[index] = 0;
-  startMillis[index] = millis();
-
-}
-
-void turnOnLed(int index)
-{
-  Serial.println("in turnOnLed");  
-  digitalWrite(ledPin[index], HIGH);
-  ledState[index] = 1;
-  startMillis[index] = millis();
-
-}
-
-
-void toggleLedBasedOnTime() {
-  for(int i=0; i<2; i++) {
-    elapsedTime[i] = millis() - startMillis[i];
-
-    if (elapsedTime[i] > interval) {
-      if(ledState[i] == 1)
-        turnOffLed(i);
-      else
-        turnOnLed(i);
-    }
+void toggleSensors() {
+  elapsedTime = millis() - startMillis;
+  
+  if (elapsedTime > interval()) {
+    activeReceiver = rand() % BASE_COUNT;
+    updateReceiverState();
   }
 }
 
+int interval() {
+  // generate random intervel between 500ms to 2000ms
+  return rand() % 2000 + 500;
+}
+
+void updateReceiverState() {
+  for (int i = 0; i < BASE_COUNT; i++) {
+    if(i == activeReceiver)
+      turnOnReceiver(i);
+    else
+      turnOffReceiver(i);
+  }
+
+  startMillis = millis();
+}
+
+void turnOffReceiver(int index) {
+  String logger = "set receiver " + String(index) + " OFF";
+  Serial.print(logger);
+  digitalWrite(ledPins[index], LOW); 
+}
+
+void turnOnReceiver(int index) {
+  String logger = "set receiver " + String(index) + " ON";
+  Serial.println(logger);
+  digitalWrite(ledPins[index], HIGH);
+}
+
+void incrementScore() {
+  String logger = "incremented score to: " + String(++score);
+  Serial.println(logger);
+}
+
+void recordHit(int index) {
+  unsigned int value = results.value;
+  String logger = "register senser " + String(index) + " hit with value: " + String(value);
+  Serial.println(logger);
+
+  if(value > THRESHOLD) {
+    incrementScore();
+    turnOffReceiver(index);
+    startMillis = millis();
+  }
+}
 
 
