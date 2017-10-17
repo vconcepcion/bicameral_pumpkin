@@ -1,83 +1,83 @@
 #include <IRremote.h>
 
-#define RECEIVERS 2
-
-int receiverPins[] = {8,13};   
-int ledPin[] = {7,2}; 
-int ledState[] = {0,0};
-int scores[] = {0,0};
-int recieverState[] = {0, 1};
+int ledPin = 7;
+int ledState = 0;
 int interval = 3000;
-unsigned long startMillis[2];
-unsigned long elapsedTime[2];
+int b_score = 0;
+int r_score = 0;
 
-IRrecv *irrecvs[RECEIVERS];
+unsigned long startMillis;
+unsigned long elapsedTime;
+
+IRrecv *irrecvs[0];
 decode_results results;
 void setup()
 {
   Serial.begin(9600);
-  irrecvs[0] = new IRrecv(8); // Receiver #0
-  irrecvs[1] = new IRrecv(13); // Receiver #1: pin 3
-
-
-  for (int i = 0; i < RECEIVERS; i++)
-    irrecvs[i]->enableIRIn();
-  
-  pinMode(ledPin[0], OUTPUT);
-  pinMode(ledPin[1], OUTPUT);
+  irrecvs[0] = new IRrecv(13); // IR pin 13
+  irrecvs[0]->enableIRIn();  
+  pinMode(ledPin, OUTPUT); // LED pin 7
 }
  
 void loop() {
   toggleLedBasedOnTime();
 
-  for (int i = 0; i < RECEIVERS; i++){
-    
-    if (irrecvs[i]->decode(&results)) {
-      if(ledState[i] == 1) {
-        Serial.println("index:");
-        Serial.println(i);
-        turnOffLed(i);
-        scores[i] += i+1;
-        Serial.println("scores[%i]:%i", i, scores[i]);
-      }
-
-      unsigned int value = results.value;
-      Serial.println(value);
-      irrecvs[0]->resume();
+  if (irrecvs[0]->decode(&results)) {
+    if(ledState == 1) {
+      unsigned int rawbuf_last = results.rawbuf[results.rawlen-1];
+      recordHit(rawbuf_last);
     }
+
+    irrecvs[0]->resume();
   }
 }
 
-void turnOffLed(int index)
+void turnOffLed()
 {
-  Serial.println("in turnOffLed");
-  digitalWrite(ledPin[index], LOW);
-  ledState[index] = 0;
-  startMillis[index] = millis();
-
+  Serial.println("turnOffLed");
+  digitalWrite(ledPin, LOW);
+  ledState = 0;
+  startMillis = millis();
 }
 
-void turnOnLed(int index)
+void turnOnLed()
 {
-  Serial.println("in turnOnLed");  
-  digitalWrite(ledPin[index], HIGH);
-  ledState[index] = 1;
-  startMillis[index] = millis();
-
+  Serial.println("turnOnLed");  
+  digitalWrite(ledPin, HIGH);
+  ledState = 1;
+  startMillis = millis();
 }
 
 
 void toggleLedBasedOnTime() {
-  for(int i=0; i<2; i++) {
-    elapsedTime[i] = millis() - startMillis[i];
+  elapsedTime = millis() - startMillis;
 
-    if (elapsedTime[i] > interval) {
-      if(ledState[i] == 1)
-        turnOffLed(i);
-      else
-        turnOnLed(i);
-    }
+  if (elapsedTime > interval) {
+    if(ledState == 1)
+      turnOffLed();
+    else
+      turnOnLed();
   }
+}
+
+void incrementScore(int rawbuf_last) {
+  if(rawbuf_last < 10)
+    b_score++;
+  else
+    r_score++;
+
+  Serial.println("Scores:");
+  Serial.print("b_score: ");
+  Serial.print(b_score);
+  Serial.print(" r_score: ");
+  Serial.println(r_score);
+}
+
+void recordHit(int rawbuf_last) {
+  Serial.print(" rawbuf_last: ");
+  Serial.println(rawbuf_last);
+  incrementScore(rawbuf_last);
+  turnOffLed();
 }
 
 
