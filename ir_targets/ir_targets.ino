@@ -8,8 +8,8 @@
 
 // Define all the devices as global variables
 IRrecv *irrecvs[BASE_COUNT];
-int ledPins[] = {7,2};
-int receiverPins[] = {8,12};
+int ledPins[] = {7,2,4};
+int receiverPins[] = {8,13,13};
 
 // Define all time related variables
 unsigned long startMillis;
