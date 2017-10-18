@@ -67,8 +67,8 @@ void toggleSensors() {
 }
 
 int interval() {
-  // generate random intervel between 1000ms to 3000ms
-    return rand() % 2000 + 1000;
+  // generate random intervel between 500ms to 2500ms
+    return rand() % 2000 + 500;
 }
 
 
