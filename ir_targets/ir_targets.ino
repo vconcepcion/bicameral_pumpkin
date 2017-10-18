@@ -1,84 +1,118 @@
 #include <IRremote.h>
 
-int ledPin = 7;
-int ledState = 0;
-int interval = 3000;
-int b_score = 0;
-int r_score = 0;
+// Constants
+#define BASE_COUNT 2
+#define BLUE_LASER 0
+#define RED_LASER 1
 
+
+// Define all the devices as global variables
+IRrecv *irrecvs[BASE_COUNT];
+int ledPins[] = {7,2};
+int receiverPins[] = {8,12};
+
+// Define all time related variables
 unsigned long startMillis;
 unsigned long elapsedTime;
 
-IRrecv *irrecvs[0];
+
+// State variables
+int activeReceiver;
+
+// Store scores
+int scores[BASE_COUNT] = {0,0};
 decode_results results;
-void setup()
-{
+
+// methods
+void setup() {
   Serial.begin(9600);
-  irrecvs[0] = new IRrecv(13); // IR pin 13
-  irrecvs[0]->enableIRIn();  
-  pinMode(ledPin, OUTPUT); // LED pin 7
+  initSensors();
+  initLeds();
 }
- 
+
+void initSensors() {
+  
+  for (int i = 0; i < BASE_COUNT; i++) {
+    irrecvs[i] = new IRrecv(receiverPins[i]);
+    irrecvs[i]->enableIRIn();
+  }
+}
+
+void initLeds() {
+  for (int i = 0; i < BASE_COUNT; i++)
+    pinMode(ledPins[i], OUTPUT);
+}
+
+
 void loop() {
-  toggleLedBasedOnTime();
+  toggleSensors();
 
-  if (irrecvs[0]->decode(&results)) {
-    if(ledState == 1) {
-      unsigned int rawbuf_last = results.rawbuf[results.rawlen-1];
-      recordHit(rawbuf_last);
+  for (int i = 0; i < BASE_COUNT; i++){
+    if (irrecvs[i]->decode(&results)) {
+      if(i == activeReceiver)
+        recordHit(i);
+      irrecvs[i]->resume();
     }
-
-    irrecvs[0]->resume();
   }
 }
 
-void turnOffLed()
-{
-  Serial.println("turnOffLed");
-  digitalWrite(ledPin, LOW);
-  ledState = 0;
-  startMillis = millis();
-}
 
-void turnOnLed()
-{
-  Serial.println("turnOnLed");  
-  digitalWrite(ledPin, HIGH);
-  ledState = 1;
-  startMillis = millis();
-}
-
-
-void toggleLedBasedOnTime() {
+void toggleSensors() {
   elapsedTime = millis() - startMillis;
-
-  if (elapsedTime > interval) {
-    if(ledState == 1)
-      turnOffLed();
-    else
-      turnOnLed();
+  
+  if (elapsedTime > interval()) {
+    activeReceiver = rand() % BASE_COUNT;
+    updateReceiverState();
   }
 }
 
-void incrementScore(int rawbuf_last) {
-  if(rawbuf_last < 10)
-    b_score++;
-  else
-    r_score++;
-
-  Serial.println("Scores:");
-  Serial.print("b_score: ");
-  Serial.print(b_score);
-  Serial.print(" r_score: ");
-  Serial.println(r_score);
+int interval() {
+  // generate random intervel between 1000ms to 3000ms
+    return rand() % 2000 + 1000;
 }
 
-void recordHit(int rawbuf_last) {
+
+void updateReceiverState() {
+  for (int i = 0; i < BASE_COUNT; i++) {
+    if(i == activeReceiver)
+      turnOnReceiver(i);
+    else
+      turnOffReceiver(i);
+  }
+
+  startMillis = millis();
+}
+
+void turnOffReceiver(int index) {
+  digitalWrite(ledPins[index], LOW); 
+}
+
+void turnOnReceiver(int index) {
+  digitalWrite(ledPins[index], HIGH);
+}
+
+void recordHit(int index) {
+  unsigned int rawbuf_last = results.rawbuf[results.rawlen-1];
   Serial.print(" rawbuf_last: ");
   Serial.println(rawbuf_last);
-  incrementScore(rawbuf_last);
-  turnOffLed();
+  
+  if(rawbuf_last < 10)
+    scores[BLUE_LASER]++;
+  else
+    scores[RED_LASER]++;
+    
+  String logger = "hit index: " + String(index);
+  Serial.println(logger);
+  turnOffReceiver(index);
+  printScores();
 }
 
+void printScores() {
+  Serial.println("Scores:");
+  Serial.print("BLUE: ");
+  Serial.print(scores[BLUE_LASER]);
+  Serial.print(" RED: ");
+  Serial.println(scores[RED_LASER]);
+}
 
 
