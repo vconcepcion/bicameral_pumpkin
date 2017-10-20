@@ -21,7 +21,7 @@ unsigned long elapsedTime;
 int activeReceiver;
 
 // Store scores
-int scores[BASE_COUNT] = {0,0};
+int scores[] = {0,0};
 decode_results results;
 
 // methods
