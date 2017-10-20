@@ -1,9 +1,10 @@
 #include <IRremote.h>
 
 // Constants
-#define BASE_COUNT 2
+#define BASE_COUNT 3
 #define BLUE_LASER 0
 #define RED_LASER 1
+#define DEBUG_MODE true
 
 
 // Define all the devices as global variables
@@ -93,17 +94,18 @@ void turnOnReceiver(int index) {
 
 void recordHit(int index) {
   unsigned int rawbuf_last = results.rawbuf[results.rawlen-1];
-  Serial.print(" rawbuf_last: ");
-  Serial.println(rawbuf_last);
   
-  if(rawbuf_last < 10)
+  if(rawbuf_last < 10){
     scores[BLUE_LASER]++;
-  else
+    Serial.write('B');
+  } else {
     scores[RED_LASER]++;
-    
-  String logger = "hit index: " + String(index);
-  Serial.println(logger);
+    Serial.write('R');
+  }
+
   turnOffReceiver(index);
+  printRawbufLast(rawbuf_last);
+  printHit(index);
   printScores();
 }
 
@@ -113,6 +115,20 @@ void printScores() {
   Serial.print(scores[BLUE_LASER]);
   Serial.print(" RED: ");
   Serial.println(scores[RED_LASER]);
+}
+
+void printRawbufLast(unsigned int rawbuf_last) {
+  if(DEBUG_MODE) {
+    Serial.print(" rawbuf_last: ");
+    Serial.println(rawbuf_last);
+  }
+}
+
+void printHit(int index) {
+  if(DEBUG_MODE) {
+     String logger = "hit index: " + String(index);
+    Serial.println(logger);
+  }
 }
 
 
