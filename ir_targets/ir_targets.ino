@@ -4,7 +4,7 @@
 #define BASE_COUNT 3
 #define BLUE_LASER 0
 #define RED_LASER 1
-#define DEBUG_MODE true
+#define DEBUG_MODE false
 
 
 // Define all the devices as global variables
