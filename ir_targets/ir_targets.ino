@@ -110,11 +110,13 @@ void recordHit(int index) {
 }
 
 void printScores() {
-  Serial.println("Scores:");
-  Serial.print("BLUE: ");
-  Serial.print(scores[BLUE_LASER]);
-  Serial.print(" RED: ");
-  Serial.println(scores[RED_LASER]);
+  if(DEBUG_MODE) {
+    Serial.println("Scores:");
+    Serial.print("BLUE: ");
+    Serial.print(scores[BLUE_LASER]);
+    Serial.print(" RED: ");
+    Serial.println(scores[RED_LASER]);
+  }
 }
 
 void printRawbufLast(unsigned int rawbuf_last) {
