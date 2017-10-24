@@ -24,12 +24,12 @@ int p1Score;
 int p2Score;
 int p1Hue = 0;    // red (starts at "data in" end of LED strip)
 int p2Hue = 160;  // blue (starts at "data out" end of LED strip)
-bool gameOver;
+enum gameStates { WAITING_FOR_PLAYERS, PREP_GAME, IN_PROGRESS, GAME_OVER } gameState;
+
+int gHue = 0;
 
 void setup() {
-  p1Score = 0;
-  p2Score = 0;
-  gameOver = false;
+  resetGame();
 
   FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
 
@@ -37,19 +37,65 @@ void setup() {
 }
 
 void loop() {
-  if (gameOver) {
-    displayWinner();
-  } else if (p1Score >= NUM_LEDS / 2 || p2Score >= NUM_LEDS / 2) {
-    gameOver = true;
-  } else {
+  if (gameState == WAITING_FOR_PLAYERS) {
+    displayWaitingForPlayers();
+  } else if (gameState == PREP_GAME) {
     displayScore();
+  } else if (gameState == IN_PROGRESS) {
+    if (p1Score >= NUM_LEDS / 2 || p2Score >= NUM_LEDS / 2) {
+      gameState = GAME_OVER;
+      Serial.write('O');
+    } else {
+      displayScore();
+    }
+  } else if (gameState == GAME_OVER) {
+    displayWinner();
   }
 }
 
-// Hit registered event signaled on serial port
+
+// Handle messages on serial port
 void serialEvent() {
   while (Serial.available()) {
     char ch = Serial.read();
+    switch (ch) {
+      case 'Q':
+        resetGame();
+        break;
+      case 'P':
+        prepGame();
+        break;
+      case 'S':
+        startGame();
+        break;
+      case 'R':
+      case 'B':
+        updateScore(ch);
+        break;
+    }
+  }
+}
+
+void resetGame() {
+  p1Score = 0;
+  p2Score = 0;
+  gameState = WAITING_FOR_PLAYERS;
+}
+
+void prepGame() {
+  if (gameState == WAITING_FOR_PLAYERS) {
+    gameState = PREP_GAME;
+  }
+}
+
+void startGame() {
+  if (gameState == PREP_GAME) {
+    gameState = IN_PROGRESS;
+  }
+}
+
+void updateScore(char ch) {
+  if (gameState == IN_PROGRESS) {
     if (ch == 'R') {
       p1Score++;
     } else if (ch == 'B') {
@@ -58,12 +104,27 @@ void serialEvent() {
   }
 }
 
+
+void displayWaitingForPlayers() {
+  fadeToBlackBy(leds, NUM_LEDS, 20);
+  byte dothue = 0;
+  for( int i = 0; i < 8; i++) {
+    leds[beatsin16(i+7, 0, NUM_LEDS-1 )] |= CHSV(dothue, 200, 255);
+    dothue += 32;
+  }
+  FastLED.show();
+  FastLED.delay(1000/FRAMES_PER_SECOND);
+  EVERY_N_MILLISECONDS( 20 ) { gHue++; }  // cycle through colors
+}
+
 void displayScore() {
   for (int i = 0; i < NUM_LEDS; i++) {
     if (i <= p1Score) {
       leds[i] = CHSV(p1Hue, 255, 192);
     } else if (i >= NUM_LEDS - p2Score - 1) {
       leds[i] = CHSV(p2Hue, 255, 192);
+    } else {
+      leds[i] = CRGB::Black;
     }
   }
   FastLED.show();
