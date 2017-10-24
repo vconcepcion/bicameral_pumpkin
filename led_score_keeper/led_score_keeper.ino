@@ -34,6 +34,7 @@ void setup() {
   FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
 
   Serial.begin(9600);
+  Serial1.begin(9600);
 }
 
 void loop() {
@@ -68,6 +69,14 @@ void serialEvent() {
       case 'S':
         startGame();
         break;
+    }
+  }
+}
+
+void serialEvent1() {
+  while (Serial1.available()) {
+    char ch = Serial1.read();
+    switch (ch) {
       case 'R':
       case 'B':
         updateScore(ch);
